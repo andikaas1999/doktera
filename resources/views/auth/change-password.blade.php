@@ -1,0 +1,61 @@
+@extends('layouts.app')
+@section('title', 'Ganti Password')
+@section('page-title', 'Ganti Password')
+@section('content')
+<div style="max-width:500px;">
+    <div class="panel">
+        <div class="panel-head">
+            <div class="panel-title">
+                <div class="panel-title-icon"><i class="fas fa-key"></i></div>
+                Ganti Password Akun
+            </div>
+        </div>
+        <div class="panel-body">
+            @if(session('success'))
+            <div class="alert alert-success">
+                <i class="fas fa-circle-check"></i> {{ session('success') }}
+            </div>
+            @endif
+            <form method="POST" action="{{ route('password.update') }}">
+                @csrf
+                <div class="form-group">
+                    <label class="form-label">Password Lama *</label>
+                    <input type="password" name="current_password"
+                           class="form-control {{ $errors->has('current_password') ? 'is-invalid' : '' }}"
+                           placeholder="Masukkan password lama" required>
+                    @error('current_password')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password Baru *</label>
+                    <input type="password" name="new_password"
+                           class="form-control {{ $errors->has('new_password') ? 'is-invalid' : '' }}"
+                           placeholder="Minimal 6 karakter" required>
+                    @error('new_password')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Konfirmasi Password Baru *</label>
+                    <input type="password" name="new_password_confirmation"
+                           class="form-control"
+                           placeholder="Ulangi password baru" required>
+                </div>
+                <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#92400E;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-triangle-exclamation"></i>
+                    Setelah mengganti password, Anda akan diminta <strong>login ulang</strong>.
+                </div>
+                <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <a href="{{ route('documents.index') }}" class="btn btn-outline">
+                        <i class="fas fa-times"></i> Batal
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Simpan Password
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endsection

@@ -1,0 +1,4 @@
+﻿
+    public function cabinetDetail($cabinet)
+    {
+        $cabinetInfo = Document::where('cabinet_number',
