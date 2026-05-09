@@ -89,8 +89,10 @@ class DocumentController extends Controller
                 'required',
                 'string',
                 'max:100',
-                Rule::unique('documents', 'document_number')
-                    ->where('status', '==', 'active')
+                Rule::unique("documents", "document_number")->where(
+                    "status",
+                    "active",
+                )
             ],
             'description'       => 'nullable|string',
             'category'          => 'required|string|max:100',
