@@ -112,9 +112,6 @@
                                     <i class="fas fa-eye"></i>
                                 </a>
                                 @if($doc->file_path)
-                                <a href="{{ route('documents.preview', $doc) }}" target="_blank" class="btn btn-success btn-sm" title="Lihat File">
-                                    <i class="fas fa-file-arrow-up"></i>
-                                </a>
                                 <a href="{{ route('documents.download', $doc) }}" class="btn btn-outline btn-sm" title="Download">
                                     <i class="fas fa-download"></i>
                                 </a>

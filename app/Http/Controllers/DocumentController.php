@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Document;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class DocumentController extends Controller
 {
@@ -19,13 +20,12 @@ class DocumentController extends Controller
             'url' => ['secure' => true]
         ]);
 
-        $resourceType = in_array(strtolower($fileType), ['jpg','jpeg','png','gif']) ? 'image' : 'raw';
+        $resourceType = in_array(strtolower($fileType), ['jpg', 'jpeg', 'png', 'gif']) ? 'image' : 'raw';
 
         $result = $cloudinary->uploadApi()->upload($tempPath, [
             'resource_type' => $resourceType,
             'public_id'     => 'doktera/' . time() . '_' . pathinfo($fileName, PATHINFO_FILENAME),
         ]);
-
         return $result['secure_url'];
     }
 
@@ -35,15 +35,15 @@ class DocumentController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('document_number', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhere('category', 'like', "%{$search}%")
-                  ->orWhere('tahun_anggaran', 'like', "%{$search}%")
-                  ->orWhere('cabinet_number', 'like', "%{$search}%")
-                  ->orWhere('ordner_number', 'like', "%{$search}%")
-                  ->orWhere('document_date', 'like', "%{$search}%");
+                    ->orWhere('document_number', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('category', 'like', "%{$search}%")
+                    ->orWhere('tahun_anggaran', 'like', "%{$search}%")
+                    ->orWhere('cabinet_number', 'like', "%{$search}%")
+                    ->orWhere('ordner_number', 'like', "%{$search}%")
+                    ->orWhere('document_date', 'like', "%{$search}%");
             });
         }
 
@@ -68,7 +68,7 @@ class DocumentController extends Controller
             'today'    => Document::whereDate('created_at', today())->count(),
         ];
         $cabinets   = Document::distinct('cabinet_number')->pluck('cabinet_number', 'cabinet_number');
-        $ordners    = Document::when($request->filled('cabinet'), function($q) use ($request) {
+        $ordners    = Document::when($request->filled('cabinet'), function ($q) use ($request) {
             $q->where('cabinet_number', $request->cabinet);
         })->distinct('ordner_number')->pluck('ordner_number', 'ordner_number');
         $categories = Document::distinct('category')->pluck('category', 'category');
@@ -85,7 +85,13 @@ class DocumentController extends Controller
     {
         $request->validate([
             'title'             => 'required|string|max:255',
-            'document_number'   => 'required|string|max:100|unique:documents',
+            'document_number' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('documents', 'document_number')
+                    ->where('status', '==', 'active')
+            ],
             'description'       => 'nullable|string',
             'category'          => 'required|string|max:100',
             'tahun_anggaran'    => 'nullable|string|max:10',
@@ -103,11 +109,11 @@ class DocumentController extends Controller
 
         if ($request->hasFile('file') && $request->file('file')->isValid()) {
             $file     = $request->file('file');
-            $fileName = time() . '_' . $file->getClientOriginalName();
+            $safeFilename = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $file->getClientOriginalName());
+            $fileName = time() . "_" . $safeFilename;
             $fileType = $file->getClientOriginalExtension();
             $tempPath = $file->getRealPath();
 
-            // Kompresi jika gambar
             if (in_array(strtolower($fileType), ['jpg', 'jpeg', 'png'])) {
                 $tempCompressed = storage_path('app/temp_' . $fileName);
                 if (strtolower($fileType) == 'png') {
@@ -121,7 +127,6 @@ class DocumentController extends Controller
                 $tempPath = $tempCompressed;
             }
 
-            // Upload ke Cloudinary
             try {
                 $filePath = $this->uploadToCloudinary($tempPath, $fileName, $fileType);
                 if (isset($tempCompressed) && file_exists($tempCompressed)) {
@@ -250,28 +255,20 @@ class DocumentController extends Controller
         return redirect($document->file_path);
     }
 
-    public function preview(Document $document)
-    {
-        if (!$document->file_path) {
-            return back()->with('error', 'File tidak ditemukan!');
-        }
-        return redirect($document->file_path);
-    }
-
     public function location(Request $request)
     {
         $search = $request->search;
 
         if ($search) {
             $results = Document::where('status', 'active')
-                ->where(function($q) use ($search) {
+                ->where(function ($q) use ($search) {
                     $q->where('title', 'like', "%{$search}%")
-                      ->orWhere('document_number', 'like', "%{$search}%")
-                      ->orWhere('cabinet_number', 'like', "%{$search}%")
-                      ->orWhere('ordner_number', 'like', "%{$search}%")
-                      ->orWhere('category', 'like', "%{$search}%")
-                      ->orWhere('tahun_anggaran', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%");
+                        ->orWhere('document_number', 'like', "%{$search}%")
+                        ->orWhere('cabinet_number', 'like', "%{$search}%")
+                        ->orWhere('ordner_number', 'like', "%{$search}%")
+                        ->orWhere('category', 'like', "%{$search}%")
+                        ->orWhere('tahun_anggaran', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%");
                 })
                 ->orderBy('cabinet_number')
                 ->get();
@@ -285,7 +282,7 @@ class DocumentController extends Controller
             ->orderBy('cabinet_number')
             ->get()
             ->unique('cabinet_number')
-            ->map(function($item) {
+            ->map(function ($item) {
                 return [
                     'number'       => $item->cabinet_number,
                     'label'        => $item->cabinet_label,
@@ -300,4 +297,30 @@ class DocumentController extends Controller
 
     public function cabinetDetail($cabinet)
     {
-        $cabinetInfo = Document::where('cabinet_number',
+        $cabinetInfo = Document::where('cabinet_number', $cabinet)->where('status', 'active')->first();
+        $ordners = Document::where('cabinet_number', $cabinet)
+            ->where('status', 'active')
+            ->select('ordner_number', 'ordner_label')
+            ->distinct()
+            ->orderBy('ordner_number')
+            ->get()
+            ->map(function ($item) use ($cabinet) {
+                return [
+                    'number' => $item->ordner_number,
+                    'label'  => $item->ordner_label,
+                    'count'  => Document::where('cabinet_number', $cabinet)->where('ordner_number', $item->ordner_number)->where('status', 'active')->count(),
+                ];
+            });
+
+        return view('documents.cabinet-detail', compact('cabinet', 'cabinetInfo', 'ordners'));
+    }
+
+    public function ordnerDetail($cabinet, $ordner)
+    {
+        $documents   = Document::where('cabinet_number', $cabinet)->where('ordner_number', $ordner)->where('status', 'active')->orderBy('document_sequence')->get();
+        $cabinetInfo = Document::where('cabinet_number', $cabinet)->first();
+        $ordnerInfo  = Document::where('cabinet_number', $cabinet)->where('ordner_number', $ordner)->first();
+
+        return view('documents.ordner-detail', compact('cabinet', 'ordner', 'documents', 'cabinetInfo', 'ordnerInfo'));
+    }
+}
